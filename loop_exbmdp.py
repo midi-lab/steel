@@ -369,6 +369,8 @@ def cycle_find(mdp, training_oracle, actions, size_s_pr, datasets, transition_dy
 
 	s_cyc = []
 
+	# Keep track of datasets updated in this run of cyclefind: do not update the same dataset twice in the same run.
+	s_updated_in_cycle = set()
 	for i in range(n_cyc*len(actions) ):
 		d_1 = d_prime[i]
 		state_already_found = False
@@ -377,13 +379,16 @@ def cycle_find(mdp, training_oracle, actions, size_s_pr, datasets, transition_dy
 			_,acc = training_oracle.get_trained_classifier_params_and_acc( d_0, d_1)
 			if (not (acc == 1.0)):
 				s_cyc.append(s)
-				datasets[s] = training_oracle.PreprocessedDataset.merge_datasets([d_0,d_1])
+				if s not in s_updated_in_cycle:
+					datasets[s] = training_oracle.PreprocessedDataset.merge_datasets([d_0,d_1])
+					s_updated_in_cycle.add(s)
 				state_already_found = True
 				break
 		if (not state_already_found):
 			s_prime = size_s_pr
 			size_s_pr += 1
 			datasets[s_prime] = d_1
+			s_updated_in_cycle.add(s_prime)
 			s_cyc.append(s_prime)
 	for i in range(n_cyc*len(actions)):
 		transition_dynamics[actions[i%len(actions)]][s_cyc[i]] = s_cyc[(i+1)%(len(actions)*n_cyc)]
